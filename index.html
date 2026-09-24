@@ -1,0 +1,1255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LH & Competition Territory Dashboard with Influencers & Login</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style/dist/xlsx.bundle.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --graphite: #1A3F5C;
+    --graphite-soft: #215173;
+    --steel: #0E7FB0;
+    --steel-dark: #0B6690;
+    --bg-light: #F4F7F9;
+    --card-bg: #FFFFFF;
+    --border: #DCE3E8;
+    --comp-color: #C73D21;
+    --lh-color: #0E7FB0;
+    --lh-green: #5EA82B;
+    --amber: #DDA338;
+    --purple: #6B46C1;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'IBM Plex Sans', sans-serif; background: var(--bg-light); color: var(--graphite); }
+  
+  /* Login Overlay */
+  .login-backdrop {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: linear-gradient(135deg, #1A3F5C 0%, #0E7FB0 100%);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .login-card {
+    background: white;
+    border-radius: 8px;
+    width: 100%;
+    max-width: 400px;
+    padding: 32px 28px;
+    box-shadow: 0 16px 36px rgba(0,0,0,0.25);
+    border-top: 6px solid var(--steel);
+    text-align: center;
+  }
+  .login-card h2 { font-size: 20px; color: var(--graphite); margin-bottom: 6px; }
+  .login-card p { font-size: 12.5px; color: #64748B; margin-bottom: 22px; }
+  .login-field { margin-bottom: 16px; text-align: left; }
+  .login-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; color: #64748B; margin-bottom: 5px; }
+  .login-field input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .login-btn {
+    width: 100%;
+    background: var(--steel);
+    color: white;
+    border: none;
+    padding: 11px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.15s;
+  }
+  .login-btn:hover { background: var(--steel-dark); }
+  .login-err { color: var(--comp-color); font-size: 12px; font-weight: 600; margin-top: 10px; display: none; }
+
+  /* App Header */
+  .topbar {
+    background: var(--graphite);
+    color: white;
+    padding: 16px 28px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 4px solid var(--steel);
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .topbar h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.5px; }
+  .topbar .tagline { font-size: 11px; color: #A8C4D6; font-family: 'IBM Plex Mono', monospace; }
+  .user-badge {
+    background: rgba(255,255,255,0.12);
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .logout-btn {
+    background: #C73D21;
+    color: white;
+    border: none;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    cursor: pointer;
+    font-weight: 600;
+  }
+
+  .container { max-width: 1620px; margin: 0 auto; padding: 20px; }
+  
+  .upload-panel {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: space-between;
+  }
+  .upload-left { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .file-btn {
+    background: var(--steel);
+    color: white;
+    padding: 9px 18px;
+    border-radius: 4px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    border: none;
+    transition: background 0.15s;
+  }
+  .file-btn:hover { background: var(--steel-dark); }
+  input[type="file"] { display: none; }
+  .status-text { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--graphite-soft); }
+  
+  /* Similarity Switch */
+  .similarity-toggle {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #EEF5FA;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    user-select: none;
+  }
+  .similarity-toggle input { cursor: pointer; accent-color: var(--steel); width: 16px; height: 16px; }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .stat-card .lbl { font-size: 11px; text-transform: uppercase; font-weight: 600; color: #64748B; margin-bottom: 4px; }
+  .stat-card .val { font-size: 20px; font-weight: 700; color: var(--graphite); font-family: 'IBM Plex Mono', monospace; }
+  .stat-card .sub { font-size: 11.5px; color: #8C9BA5; margin-top: 3px; }
+  
+  .controls-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .tab-group { display: flex; gap: 8px; }
+  .tab-btn {
+    padding: 8px 18px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--graphite-soft);
+  }
+  .tab-btn.active.lh { background: var(--lh-color); color: white; border-color: var(--lh-color); }
+  .tab-btn.active.comp { background: var(--comp-color); color: white; border-color: var(--comp-color); }
+  .tab-btn.active.view { background: var(--graphite); color: white; border-color: var(--graphite); }
+  
+  .filter-group { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .filter-select {
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    background: white;
+    min-width: 160px;
+  }
+  .btn-export {
+    background: var(--lh-green);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+  }
+  .btn-export:hover { background: #4B8722; }
+
+  .table-container {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow-x: auto;
+    margin-bottom: 24px;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { padding: 10px 14px; border-bottom: 1px solid var(--border); text-align: left; }
+  th { background: var(--graphite); color: white; font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.5px; }
+  tr.summary-row { transition: background 0.12s; }
+  tr.summary-row:hover { background: #EEF5FA; }
+  .num { text-align: right; font-family: 'IBM Plex Mono', monospace; }
+  
+  .badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #E8EFF5;
+    color: var(--graphite);
+    cursor: pointer;
+    transition: transform 0.1s;
+    border: none;
+  }
+  .badge:hover { transform: scale(1.05); }
+  .badge.comp { background: #FDE8E5; color: var(--comp-color); }
+  .badge.lh { background: #E5F3DC; color: var(--lh-green); }
+  .badge.eng { background: #E9F2FA; color: var(--steel); }
+  .badge.cont { background: #FEF3D6; color: #9A6500; }
+  .badge.mas { background: #F3E8FF; color: var(--purple); }
+  .btn-download-sm {
+    background: #EBF3F8;
+    color: var(--steel);
+    border: 1px solid #BFD7E8;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-download-sm:hover { background: var(--steel); color: white; }
+
+  /* Modal Dialogs */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 30, 45, 0.65);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+  }
+  .modal-window {
+    background: white;
+    border-radius: 8px;
+    width: 95%;
+    max-width: 1400px;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+  }
+  .modal-hdr {
+    padding: 16px 20px;
+    background: var(--graphite);
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
+  }
+  .modal-hdr h3 { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 22px;
+    cursor: pointer;
+  }
+  .modal-body {
+    padding: 16px 20px;
+    overflow-y: auto;
+  }
+
+  /* Profile Card Modal */
+  .profile-card-modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.45);
+    z-index: 1100;
+    justify-content: center;
+    align-items: center;
+  }
+  .profile-card {
+    background: white;
+    border-radius: 8px;
+    width: 440px;
+    padding: 24px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    border-top: 5px solid var(--steel);
+    position: relative;
+  }
+  .profile-card h4 { font-size: 17px; margin-bottom: 4px; color: var(--graphite); }
+  .profile-card .tag { font-size: 12px; font-weight: 600; color: var(--steel); margin-bottom: 16px; text-transform: uppercase; }
+  .profile-card .field { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .profile-card .field .flbl { color: #64748B; }
+  .profile-card .field .fval { font-weight: 600; text-align: right; }
+  .profile-card .phone-link { color: var(--steel); text-decoration: none; font-weight: 700; }
+  .profile-close {
+    position: absolute;
+    top: 14px;
+    right: 16px;
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #64748B;
+  }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: #7B8A95; }
+</style>
+</head>
+<body>
+
+<!-- Login Overlay Screen -->
+<div class="login-backdrop" id="loginBackdrop">
+  <div class="login-card">
+    <h2>Territory Portal Login</h2>
+    <p>Sign in to access Cumilla & Noakhali Project Opportunities</p>
+    
+    <div class="login-field">
+      <label>User ID (ASM01, ASM02, TSM01, RSM, TSE, AE)</label>
+      <input type="text" id="loginUser" placeholder="Enter User ID" autocomplete="off">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="Enter Password">
+    </div>
+    
+    <button class="login-btn" onclick="attemptLogin()">Secure Login</button>
+    <div class="login-err" id="loginErr">Invalid User ID or Password.</div>
+  </div>
+</div>
+
+<!-- Main Application -->
+<div class="topbar">
+  <div>
+    <h1>Territory Opportunity & Influencer Dashboard</h1>
+    <div class="tagline">Area (Cumilla & Noakhali) &middot; Dealer &middot; TO &middot; Engineers &middot; Contractors &middot; Masons</div>
+  </div>
+  <div class="user-badge" id="userBadge" style="display:none;">
+    <span>User: <strong id="currentUserId">-</strong></span>
+    <button class="logout-btn" onclick="logout()">Logout</button>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Upload & Similarity Panel -->
+  <div class="upload-panel">
+    <div class="upload-left">
+      <label class="file-btn" for="fileInput">📁 Upload Regional Data Excel</label>
+      <input type="file" id="fileInput" accept=".xlsx,.xls">
+      <span class="status-text" id="statusText">Upload "Regional Data_updated (1).xlsx" to start.</span>
+    </div>
+
+    <!-- Deduplication Similarity Toggle -->
+    <label class="similarity-toggle" title="Clean prefixes (M/S, MS), punctuation, and trailing spacing to group mistyped dealer names into one single row.">
+      <input type="checkbox" id="similarityCheckbox" onchange="renderDashboard()">
+      <span>⚡ Smart Dealer Deduplication (Fuzzy Clean)</span>
+    </label>
+  </div>
+
+  <!-- KPI Overview Cards -->
+  <div class="stats-grid" id="kpiGrid" style="display:none;">
+    <div class="stat-card">
+      <div class="lbl">Selected Area</div>
+      <div class="val" id="statScope">-</div>
+      <div class="sub" id="statSubtitle">All Records</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Total Projects</div>
+      <div class="val" id="statTotalProjects">-</div>
+      <div class="sub">Sites tracked</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Opportunity (Bags)</div>
+      <div class="val" id="statOpportunityBags">-</div>
+      <div class="sub" id="statOpportunityMT">- MT volume</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Engineers Tagged</div>
+      <div class="val" id="statTotalEng">-</div>
+      <div class="sub">Architects & Consultants</div>
+    </div>
+    <div class="stat-card">
+      <div class="lbl">Contractors & Masons</div>
+      <div class="val" id="statTotalContMas">-</div>
+      <div class="sub">Builder Network</div>
+    </div>
+  </div>
+
+  <!-- Dashboard Controls -->
+  <div id="dashboardControls" style="display:none;">
+    <div class="controls-row">
+      <div class="tab-group">
+        <button class="tab-btn active lh" id="btnLH" onclick="switchCategory('LH')">● LH Projects</button>
+        <button class="tab-btn comp" id="btnComp" onclick="switchCategory('COMP')">● Competition Projects</button>
+      </div>
+
+      <div class="tab-group">
+        <button class="tab-btn active view" id="btnViewDealer" onclick="switchView('DEALER')">Dealer Wise Summary</button>
+        <button class="tab-btn view" id="btnViewTO" onclick="switchView('TO')">TO Wise & Influencer Summary</button>
+      </div>
+
+      <div class="filter-group">
+        <select class="filter-select" id="areaFilter" onchange="onAreaChange()">
+          <option value="ALL">All Areas (Cumilla & Noakhali)</option>
+          <option value="Cumilla">Cumilla Area</option>
+          <option value="Noakhali">Noakhali Area</option>
+        </select>
+        <select class="filter-select" id="territoryFilter" onchange="applyFilters()">
+          <option value="ALL">All Territories</option>
+        </select>
+        <button class="btn-export" onclick="downloadCurrentSummaryTable()">⬇ Export Summary (.xlsx)</button>
+      </div>
+    </div>
+
+    <!-- Summary Table -->
+    <div class="table-container">
+      <table id="summaryTable">
+        <thead id="summaryThead"></thead>
+        <tbody id="summaryTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="empty-state" id="emptyState">
+    <div style="font-size: 40px; margin-bottom: 10px;">📊</div>
+    <p>Please upload the Excel workbook to explore Cumilla and Noakhali Areas, Territories, Dealers, TOs, and Influencers.</p>
+  </div>
+
+</div>
+
+<!-- Project Drill-down Modal -->
+<div class="modal-backdrop" id="drilldownModal">
+  <div class="modal-window">
+    <div class="modal-hdr">
+      <h3 id="modalTitle">Details</h3>
+      <div style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn-export" style="padding: 5px 12px; font-size: 12px;" onclick="downloadModalProjectList()">⬇ Download This List (.xlsx)</button>
+        <button class="modal-close" onclick="closeModal('drilldownModal')">&times;</button>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="margin-bottom: 10px; font-size: 13px; color: var(--graphite-soft);" id="modalCount"></div>
+      <div class="table-container" style="max-height: 60vh;">
+        <table id="drilldownTable">
+          <thead id="drillThead"></thead>
+          <tbody id="drillTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Details Card (Engineer / Contractor / Mason) -->
+<div class="profile-card-modal" id="profileModal">
+  <div class="profile-card">
+    <button class="profile-close" onclick="closeModal('profileModal')">&times;</button>
+    <h4 id="profName">-</h4>
+    <div class="tag" id="profRole">-</div>
+    
+    <div class="field">
+      <span class="flbl">Category</span>
+      <span class="fval" id="profCat">-</span>
+    </div>
+    <div class="field">
+      <span class="flbl">Phone Number</span>
+      <span class="fval"><a id="profPhone" class="phone-link" href="#">-</a></span>
+    </div>
+    <div class="field" id="firmRow">
+      <span class="flbl">Firm Name</span>
+      <span class="fval" id="profFirm">-</span>
+    </div>
+    <div class="field">
+      <span class="flbl">Territory & Area</span>
+      <span class="fval" id="profTerrArea">-</span>
+    </div>
+    <div class="field">
+      <span class="flbl">Tagged TO</span>
+      <span class="fval" id="profTO">-</span>
+    </div>
+    <div class="field">
+      <span class="flbl">Thana / District</span>
+      <span class="fval" id="profThanaDist">-</span>
+    </div>
+    <div class="field">
+      <span class="flbl">Address</span>
+      <span class="fval" id="profAddress">-</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// --- Authentication ---
+const ALLOWED_USERS = ['ASM01', 'ASM02', 'TSM01', 'RSM', 'TSE', 'AE'];
+const UNIVERSAL_PASSWORD = '123123';
+
+function checkSession() {
+  const user = sessionStorage.getItem('lh_auth_user');
+  if (user && ALLOWED_USERS.includes(user.toUpperCase())) {
+    document.getElementById('loginBackdrop').style.display = 'none';
+    document.getElementById('userBadge').style.display = 'flex';
+    document.getElementById('currentUserId').textContent = user.toUpperCase();
+  } else {
+    document.getElementById('loginBackdrop').style.display = 'flex';
+    document.getElementById('userBadge').style.display = 'none';
+  }
+}
+
+function attemptLogin() {
+  const u = document.getElementById('loginUser').value.trim().toUpperCase();
+  const p = document.getElementById('loginPass').value.trim();
+  const err = document.getElementById('loginErr');
+
+  if (ALLOWED_USERS.includes(u) && p === UNIVERSAL_PASSWORD) {
+    sessionStorage.setItem('lh_auth_user', u);
+    err.style.display = 'none';
+    checkSession();
+  } else {
+    err.style.display = 'block';
+  }
+}
+
+function logout() {
+  sessionStorage.removeItem('lh_auth_user');
+  checkSession();
+}
+
+document.getElementById('loginPass').addEventListener('keypress', function(e){
+  if(e.key === 'Enter') attemptLogin();
+});
+
+checkSession();
+
+// --- Data & Global State ---
+let rawData = {
+  LH: [],
+  COMP: [],
+  ENG: [],
+  CONT: [],
+  MAS: []
+};
+
+let currentCategory = 'LH';   // 'LH' or 'COMP'
+let currentView = 'DEALER';   // 'DEALER' or 'TO'
+let selectedArea = 'ALL';
+let selectedTerritory = 'ALL';
+let activeModalProjects = [];
+let activeModalTitle = "Project_List";
+
+document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+
+function cleanText(v) {
+  if (v === null || v === undefined) return '';
+  return String(v).replace(/\s+/g, ' ').trim();
+}
+
+// Canonical Territory Normalizer
+function normalizeTerritory(raw) {
+  const t = cleanText(raw);
+  const l = t.toLowerCase().replace(/[\s\-_]/g, '');
+  if (l.includes('chattogram') || l.includes('chittagong')) return 'Chattogram';
+  if (l.includes('cumilla1') || l.includes('comilla1')) return 'Cumilla 1';
+  if (l.includes('cumilla2') || l.includes('comilla2')) return 'Cumilla 2';
+  if (l.includes('cumilla3') || l.includes('comilla3')) return 'Cumilla 3';
+  if (l.includes('cumilla4') || l.includes('comilla4')) return 'Cumilla 4';
+  if (l.includes('cumilla5') || l.includes('comilla5')) return 'Cumilla 5';
+  if (l.includes('noakhali')) return 'Noakhali';
+  if (l.includes('chandpur')) return 'Chandpur';
+  if (l.includes('feni')) return 'Feni';
+  if (l.includes('laxmipur') || l.includes('lakshmipur')) return 'Laxmipur';
+  return t || 'Unknown';
+}
+
+// Strictly 2 Areas: Cumilla and Noakhali (Chattogram mapped to Noakhali Area)
+function resolveArea(rawArea, canonicalTerritory) {
+  const t = canonicalTerritory.toLowerCase();
+  if (t === 'chattogram' || t.includes('noakhali') || t.includes('chandpur') || t.includes('feni') || t.includes('laxmipur')) {
+    return 'Noakhali';
+  }
+  return 'Cumilla';
+}
+
+// Smart Dealer Similarity Normalizer (when checkbox is ON)
+function getDealerGroupKey(dealerRaw, useSimilarity) {
+  if (!useSimilarity) return dealerRaw;
+  if (!dealerRaw || dealerRaw === 'Unassigned / Direct') return 'Unassigned / Direct';
+  
+  // Normalization: lower, remove M/S, MS, (D2R), dots, commas, double spaces
+  let s = dealerRaw.toLowerCase();
+  s = s.replace(/\b(m\/s|ms)\b/g, '');
+  s = s.replace(/\(d2r\)/g, '');
+  s = s.replace(/[\.\,\(\)\-]/g, ' ');
+  s = s.replace(/\s+/g, ' ').trim();
+  
+  // Title-case the cleaned string for clean display
+  return s.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function handleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const status = document.getElementById('statusText');
+  status.textContent = "Processing " + file.name + "...";
+
+  const reader = new FileReader();
+  reader.onload = function(evt) {
+    try {
+      const data = new Uint8Array(evt.target.result);
+      const wb = XLSX.read(data, { type: 'array' });
+
+      // 1. LH Project Data
+      const wsLH = wb.Sheets['LH Project Data'] || wb.Sheets[wb.SheetNames[1]];
+      const lhJson = XLSX.utils.sheet_to_json(wsLH, { raw: true, defval: '' });
+      rawData.LH = cleanProjectRows(lhJson, 'LH');
+
+      // 2. Competition Project Data
+      const wsComp = wb.Sheets['Competition Project Data'] || wb.Sheets[wb.SheetNames[2]];
+      const compRows = XLSX.utils.sheet_to_json(wsComp, { header: 1, defval: '' });
+      let compJson = [];
+      if (compRows.length > 1) {
+        const header = compRows[1];
+        for (let r = 2; r < compRows.length; r++) {
+          const rowObj = {};
+          header.forEach((h, idx) => { if (h) rowObj[cleanText(h)] = compRows[r][idx] || ''; });
+          compJson.push(rowObj);
+        }
+      }
+      rawData.COMP = cleanProjectRows(compJson, 'COMP');
+
+      // 3. Engineer List
+      const wsEng = wb.Sheets['Engineer List'];
+      if (wsEng) {
+        const engJson = XLSX.utils.sheet_to_json(wsEng, { raw: true, defval: '' });
+        rawData.ENG = engJson.map(r => {
+          const terr = normalizeTerritory(r['Territory']);
+          return {
+            name: cleanText(r['Engineer Name']),
+            phone: cleanText(r['Phone Number']),
+            firm: cleanText(r['Firm Name']),
+            address: cleanText(r['Address']),
+            category: cleanText(r['Category']) || 'B',
+            territory: terr,
+            area: resolveArea(r['Area'], terr),
+            toName: cleanText(r['TO name'] || r['TO Name']),
+            type: 'Engineer'
+          };
+        });
+      }
+
+      // 4. Contractor List
+      const wsCont = wb.Sheets['Contractor'];
+      if (wsCont) {
+        const contJson = XLSX.utils.sheet_to_json(wsCont, { raw: true, defval: '' });
+        rawData.CONT = contJson.map(r => {
+          const terr = normalizeTerritory(r['Territory']);
+          return {
+            name: cleanText(r['Contractor name'] || r['Contractor Name']),
+            phone: cleanText(r['Number'] || r['Phone Number']),
+            district: cleanText(r['District']),
+            thana: cleanText(r['Thana']),
+            address: cleanText(r['Address']),
+            category: cleanText(r['Category']) || 'A',
+            territory: terr,
+            area: resolveArea(r['Area'], terr),
+            toName: cleanText(r['TO name'] || r['TO Name']),
+            type: 'Contractor'
+          };
+        });
+      }
+
+      // 5. Mason List
+      const wsMas = wb.Sheets['Mason'];
+      if (wsMas) {
+        const masJson = XLSX.utils.sheet_to_json(wsMas, { raw: true, defval: '' });
+        rawData.MAS = masJson.map(r => {
+          const terr = normalizeTerritory(r['Territory']);
+          return {
+            name: cleanText(r['Mason name'] || r['Mason Name']),
+            phone: cleanText(r['Number'] || r['Phone Number']),
+            district: cleanText(r['District']),
+            thana: cleanText(r['Thana']),
+            address: cleanText(r['Address']),
+            category: cleanText(r['Category']) || 'B',
+            territory: terr,
+            area: resolveArea(r['Area'], terr),
+            toName: cleanText(r['TO name'] || r['TO Name']),
+            type: 'Mason'
+          };
+        });
+      }
+
+      status.textContent = `Loaded successfully: ${rawData.LH.length} LH Projects, ${rawData.COMP.length} Competition Projects, ${rawData.ENG.length} Engineers, ${rawData.CONT.length} Contractors, ${rawData.MAS.length} Masons.`;
+      
+      rebuildTerritoryDropdown();
+      document.getElementById('emptyState').style.display = 'none';
+      document.getElementById('kpiGrid').style.display = 'grid';
+      document.getElementById('dashboardControls').style.display = 'block';
+      
+      renderDashboard();
+    } catch (err) {
+      console.error(err);
+      status.textContent = "Error reading workbook: " + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function cleanProjectRows(rows, type) {
+  return rows.map((r, i) => {
+    let remQty = 0;
+    for (let k in r) {
+      if (k.includes('Remaining QTY') || k.includes('Sales Opportunity')) {
+        remQty = parseFloat(String(r[k]).replace(/,/g, '')) || 0;
+        break;
+      }
+    }
+    const terr = normalizeTerritory(r['Territory']);
+    const area = resolveArea(r['Area'], terr);
+    const rawDealer = cleanText(r['Linked Dealer/D2R Name']) || 'Unassigned / Direct';
+    const retail = cleanText(r['Linked Retail']) || '-';
+    const toName = cleanText(r['TO Name'] || r['TO name']) || 'Unassigned TO';
+    const owner = cleanText(r['Owner Name']);
+    const contact = cleanText(r['Owner Contact Number']);
+    const status = cleanText(r['Project Status\n(Piling/Foundation/Structure/Finishing/Hold/Completed)'] || r['Project Status']);
+    
+    let brand = '';
+    if (type === 'LH') {
+      brand = r['A) Suggested/Using Brand: HWP/PLUS'] || r['B) Suggested/Using Brand: HSS/PLC'] || 'Holcim';
+    } else {
+      const curB = cleanText(r['A) Current Brand']);
+      const sugB = cleanText(r['B) Suggested Brand']);
+      brand = (curB ? curB : '') + (sugB ? ' -> ' + sugB : '');
+    }
+
+    return {
+      sl: r['SL'] || (i + 1),
+      projectName: cleanText(r['Project Name']) || 'Unnamed Project',
+      area: area,
+      territory: terr,
+      dealerRaw: rawDealer,
+      retail: retail,
+      toName: toName,
+      address: [cleanText(r['Address']), cleanText(r['City'])].filter(Boolean).join(', '),
+      ownerDisplay: contact ? `${owner} (${contact})` : owner,
+      status: status,
+      brand: brand,
+      remBags: remQty,
+      remMT: Math.round((remQty / 20) * 10) / 10
+    };
+  });
+}
+
+function onAreaChange() {
+  selectedArea = document.getElementById('areaFilter').value;
+  rebuildTerritoryDropdown();
+  applyFilters();
+}
+
+function rebuildTerritoryDropdown() {
+  const allProjects = [...rawData.LH, ...rawData.COMP, ...rawData.ENG, ...rawData.CONT, ...rawData.MAS];
+  const terrSet = new Set();
+  
+  allProjects.forEach(r => {
+    if (selectedArea === 'ALL' || r.area === selectedArea) {
+      if (r.territory) terrSet.add(r.territory);
+    }
+  });
+
+  const terrSelect = document.getElementById('territoryFilter');
+  terrSelect.innerHTML = '<option value="ALL">All Territories</option>';
+  Array.from(terrSet).sort().forEach(t => {
+    terrSelect.innerHTML += `<option value="${t}">${t}</option>`;
+  });
+  selectedTerritory = 'ALL';
+}
+
+function switchCategory(cat) {
+  currentCategory = cat;
+  document.getElementById('btnLH').classList.toggle('active', cat === 'LH');
+  document.getElementById('btnComp').classList.toggle('active', cat === 'COMP');
+  renderDashboard();
+}
+
+function switchView(view) {
+  currentView = view;
+  document.getElementById('btnViewDealer').classList.toggle('active', view === 'DEALER');
+  document.getElementById('btnViewTO').classList.toggle('active', view === 'TO');
+  renderDashboard();
+}
+
+function applyFilters() {
+  selectedTerritory = document.getElementById('territoryFilter').value;
+  renderDashboard();
+}
+
+function getFilteredData() {
+  const dataset = rawData[currentCategory] || [];
+  return dataset.filter(r => {
+    const areaMatch = (selectedArea === 'ALL' || r.area === selectedArea);
+    const terrMatch = (selectedTerritory === 'ALL' || r.territory === selectedTerritory);
+    return areaMatch && terrMatch;
+  });
+}
+
+function getFilteredInfluencers(type) {
+  const dataset = rawData[type] || [];
+  return dataset.filter(r => {
+    const areaMatch = (selectedArea === 'ALL' || r.area === selectedArea);
+    const terrMatch = (selectedTerritory === 'ALL' || r.territory === selectedTerritory);
+    return areaMatch && terrMatch;
+  });
+}
+
+function normTO(s) {
+  return String(s || '').toLowerCase().replace(/[\s\.\-_]/g, '');
+}
+
+let currentSummaryRowsForExport = [];
+
+function renderDashboard() {
+  const data = getFilteredData();
+  const engData = getFilteredInfluencers('ENG');
+  const contData = getFilteredInfluencers('CONT');
+  const masData = getFilteredInfluencers('MAS');
+
+  const totalProjects = data.length;
+  const totalBags = data.reduce((s, r) => s + r.remBags, 0);
+  const totalMT = Math.round((totalBags / 20) * 10) / 10;
+  
+  document.getElementById('statScope').textContent = selectedArea === 'ALL' ? 'Cumilla & Noakhali' : (selectedArea + ' Area');
+  document.getElementById('statSubtitle').textContent = selectedTerritory === 'ALL' ? (currentCategory === 'LH' ? 'LH Projects' : 'Competition Projects') : selectedTerritory;
+  document.getElementById('statTotalProjects').textContent = totalProjects.toLocaleString();
+  document.getElementById('statOpportunityBags').textContent = Math.round(totalBags).toLocaleString();
+  document.getElementById('statOpportunityMT').textContent = totalMT.toLocaleString() + " MT";
+  document.getElementById('statTotalEng').textContent = engData.length.toLocaleString();
+  document.getElementById('statTotalContMas').textContent = (contData.length + masData.length).toLocaleString();
+
+  if (currentView === 'DEALER') {
+    renderDealerView(data);
+  } else {
+    renderTOView(data, engData, contData, masData);
+  }
+}
+
+function renderDealerView(data) {
+  const useSimilarity = document.getElementById('similarityCheckbox').checked;
+  const grouped = {};
+
+  data.forEach(r => {
+    const key = getDealerGroupKey(r.dealerRaw, useSimilarity);
+    if (!grouped[key]) {
+      grouped[key] = { name: key, area: r.area, territory: r.territory, count: 0, bags: 0, mt: 0, rows: [] };
+    }
+    grouped[key].count += 1;
+    grouped[key].bags += r.remBags;
+    grouped[key].mt += r.remMT;
+    grouped[key].rows.push(r);
+  });
+
+  const summaryList = Object.values(grouped).sort((a, b) => b.bags - a.bags);
+  currentSummaryRowsForExport = summaryList;
+
+  const thead = document.getElementById('summaryThead');
+  thead.innerHTML = `
+    <tr>
+      <th>#</th>
+      <th>Linked Dealer / D2R Name ${useSimilarity ? '<span style="color:#7DCF49; font-size:10px;">[CLEANED]</span>' : ''}</th>
+      <th>Area</th>
+      <th>Territory</th>
+      <th class="num">Projects Count</th>
+      <th class="num">Remaining Qty (Bags)</th>
+      <th class="num">Remaining Qty (MT)</th>
+      <th class="num">Avg Bags / Project</th>
+      <th>Actions</th>
+    </tr>
+  `;
+
+  const tbody = document.getElementById('summaryTbody');
+  tbody.innerHTML = '';
+
+  if (summaryList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 30px; color:#888;">No dealer records match filters.</td></tr>`;
+    return;
+  }
+
+  summaryList.forEach((item, idx) => {
+    const avgBags = item.count > 0 ? Math.round(item.bags / item.count) : 0;
+    const tr = document.createElement('tr');
+    tr.className = 'summary-row';
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><strong>${item.name}</strong></td>
+      <td>${item.area}</td>
+      <td>${item.territory}</td>
+      <td class="num"><span class="badge ${currentCategory === 'LH' ? 'lh' : 'comp'}" onclick='openProjectModal("${encodeURIComponent(item.name)}", itemRowsMap[${idx}])'>${item.count}</span></td>
+      <td class="num"><strong>${Math.round(item.bags).toLocaleString()}</strong></td>
+      <td class="num">${Math.round(item.mt).toLocaleString()}</td>
+      <td class="num">${avgBags.toLocaleString()}</td>
+      <td style="display:flex; gap:6px;">
+        <button class="badge" onclick='openProjectModal("${encodeURIComponent(item.name)}", itemRowsMap[${idx}])'>View</button>
+        <button class="btn-download-sm" onclick='downloadSingleGroupProjects("${encodeURIComponent(item.name)}", itemRowsMap[${idx}])'>⬇ Excel</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+  
+  // Fast memory map for modal/downloads without massive inline strings
+  window.itemRowsMap = summaryList.map(x => x.rows);
+}
+
+function renderTOView(data, engData, contData, masData) {
+  const toMap = {};
+
+  function ensureTO(toName, area, terr) {
+    const n = cleanText(toName) || 'Unassigned TO';
+    const key = normTO(n);
+    if (!toMap[key]) {
+      toMap[key] = {
+        name: n,
+        area: area || '-',
+        territory: terr || '-',
+        projects: [],
+        bags: 0,
+        mt: 0,
+        engineers: [],
+        contractors: [],
+        masons: []
+      };
+    }
+    return toMap[key];
+  }
+
+  data.forEach(r => {
+    const item = ensureTO(r.toName, r.area, r.territory);
+    item.projects.push(r);
+    item.bags += r.remBags;
+    item.mt += r.remMT;
+  });
+
+  engData.forEach(e => {
+    const item = ensureTO(e.toName, e.area, e.territory);
+    item.engineers.push(e);
+  });
+
+  contData.forEach(c => {
+    const item = ensureTO(c.toName, c.area, c.territory);
+    item.contractors.push(c);
+  });
+
+  masData.forEach(m => {
+    const item = ensureTO(m.toName, m.area, m.territory);
+    item.masons.push(m);
+  });
+
+  const summaryList = Object.values(toMap).sort((a, b) => b.bags - a.bags);
+  currentSummaryRowsForExport = summaryList;
+
+  const thead = document.getElementById('summaryThead');
+  thead.innerHTML = `
+    <tr>
+      <th>#</th>
+      <th>Technical Officer (TO)</th>
+      <th>Area</th>
+      <th>Territory</th>
+      <th class="num">Projects (Opportunity)</th>
+      <th class="num">Remaining Bags</th>
+      <th class="num">Remaining MT</th>
+      <th class="num">Engineers</th>
+      <th class="num">Contractors</th>
+      <th class="num">Masons</th>
+      <th>Actions</th>
+    </tr>
+  `;
+
+  const tbody = document.getElementById('summaryTbody');
+  tbody.innerHTML = '';
+
+  if (summaryList.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="11" style="text-align:center; padding: 30px; color:#888;">No TO records match filters.</td></tr>`;
+    return;
+  }
+
+  summaryList.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'summary-row';
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><strong>${item.name}</strong></td>
+      <td>${item.area}</td>
+      <td>${item.territory}</td>
+      <td class="num"><span class="badge ${currentCategory === 'LH' ? 'lh' : 'comp'}" onclick='openProjectModal("${encodeURIComponent(item.name)}", toProjectsMap[${idx}])'>${item.projects.length} Sites</span></td>
+      <td class="num"><strong>${Math.round(item.bags).toLocaleString()}</strong></td>
+      <td class="num">${Math.round(item.mt).toLocaleString()}</td>
+      <td class="num"><span class="badge eng" onclick='openInfluencerListModal("Engineer", "${encodeURIComponent(item.name)}", toEngMap[${idx}])'>${item.engineers.length} Eng</span></td>
+      <td class="num"><span class="badge cont" onclick='openInfluencerListModal("Contractor", "${encodeURIComponent(item.name)}", toContMap[${idx}])'>${item.contractors.length} Cont</span></td>
+      <td class="num"><span class="badge mas" onclick='openInfluencerListModal("Mason", "${encodeURIComponent(item.name)}", toMasMap[${idx}])'>${item.masons.length} Mas</span></td>
+      <td style="display:flex; gap:6px;">
+        <button class="badge" onclick='openProjectModal("${encodeURIComponent(item.name)}", toProjectsMap[${idx}])'>View</button>
+        <button class="btn-download-sm" onclick='downloadSingleGroupProjects("${encodeURIComponent(item.name)}", toProjectsMap[${idx}])'>⬇ Excel</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  window.toProjectsMap = summaryList.map(x => x.projects);
+  window.toEngMap = summaryList.map(x => x.engineers);
+  window.toContMap = summaryList.map(x => x.contractors);
+  window.toMasMap = summaryList.map(x => x.masons);
+}
+
+// 1. Projects Modal
+function openProjectModal(nameDecoded, rows) {
+  const groupName = decodeURIComponent(nameDecoded);
+  activeModalProjects = rows;
+  activeModalTitle = `${currentCategory}_Projects_${groupName.replace(/[\s\/\\]/g, '_')}`;
+
+  document.getElementById('modalTitle').textContent = `${currentCategory === 'LH' ? 'LH' : 'Competition'} Projects — ${groupName}`;
+  document.getElementById('modalCount').textContent = `Showing ${rows.length} project(s) | Total Opportunity: ${Math.round(rows.reduce((s,r)=>s+r.remBags,0)).toLocaleString()} Bags`;
+  
+  const thead = document.getElementById('drillThead');
+  thead.innerHTML = `
+    <tr>
+      <th>SL</th>
+      <th>Project Name</th>
+      <th>Area</th>
+      <th>Territory</th>
+      <th>Owner & Contact</th>
+      <th>Address</th>
+      <th>Status</th>
+      <th>Dealer</th>
+      <th>Retail</th>
+      <th>TO Name</th>
+      <th style="text-align:right;">Remaining Bags</th>
+      <th style="text-align:right;">Opportunity (MT)</th>
+      <th>Brand</th>
+    </tr>
+  `;
+
+  const tbody = document.getElementById('drillTbody');
+  tbody.innerHTML = '';
+  
+  if (rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding: 20px; color:#888;">No projects tagged for this entry.</td></tr>`;
+  }
+
+  rows.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${i + 1}</td>
+      <td><strong>${r.projectName}</strong></td>
+      <td>${r.area}</td>
+      <td>${r.territory}</td>
+      <td>${r.ownerDisplay || '-'}</td>
+      <td>${r.address || '-'}</td>
+      <td><span class="badge">${r.status || 'Active'}</span></td>
+      <td>${r.dealerRaw}</td>
+      <td>${r.retail}</td>
+      <td>${r.toName}</td>
+      <td class="num"><strong>${Math.round(r.remBags).toLocaleString()}</strong></td>
+      <td class="num">${r.remMT.toLocaleString()}</td>
+      <td>${r.brand || '-'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('drilldownModal').style.display = 'flex';
+}
+
+// 2. Influencer List Modal
+function openInfluencerListModal(type, toNameDecoded, list) {
+  const toName = decodeURIComponent(toNameDecoded);
+  document.getElementById('modalTitle').textContent = `${type} Network List — TO: ${toName}`;
+  document.getElementById('modalCount').textContent = `Total ${type}s: ${list.length} | Click any row to view full Contact Profile Card`;
+
+  const thead = document.getElementById('drillThead');
+  thead.innerHTML = `
+    <tr>
+      <th>#</th>
+      <th>Name</th>
+      <th>Category</th>
+      <th>Phone Number</th>
+      ${type === 'Engineer' ? '<th>Firm Name</th>' : '<th>Thana / District</th>'}
+      <th>Address</th>
+      <th>Area</th>
+      <th>Territory</th>
+      <th>Action</th>
+    </tr>
+  `;
+
+  const tbody = document.getElementById('drillTbody');
+  tbody.innerHTML = '';
+
+  if (list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding: 20px; color:#888;">No ${type} records tagged under ${toName}.</td></tr>`;
+  }
+
+  list.forEach((item, idx) => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => openProfileCard(item);
+    tr.innerHTML = `
+      <td>${idx + 1}</td>
+      <td><strong>${item.name}</strong></td>
+      <td><span class="badge">${item.category}</span></td>
+      <td><a class="phone-link" href="tel:${item.phone}">${item.phone || '-'}</a></td>
+      <td>${type === 'Engineer' ? (item.firm || '-') : [item.thana, item.district].filter(Boolean).join(', ') || '-'}</td>
+      <td>${item.address || '-'}</td>
+      <td>${item.area || '-'}</td>
+      <td>${item.territory || '-'}</td>
+      <td><button class="badge" onclick='event.stopPropagation(); openProfileCard(item)'>View Card</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('drilldownModal').style.display = 'flex';
+}
+
+// 3. Profile Card Modal
+function openProfileCard(item) {
+  document.getElementById('profName').textContent = item.name || 'Unnamed';
+  document.getElementById('profRole').textContent = item.type + " Profile Card";
+  document.getElementById('profCat').textContent = "Category " + (item.category || 'N/A');
+  
+  const phoneEl = document.getElementById('profPhone');
+  phoneEl.textContent = item.phone || 'No phone recorded';
+  phoneEl.href = item.phone ? `tel:${item.phone}` : '#';
+
+  const firmRow = document.getElementById('firmRow');
+  if (item.type === 'Engineer') {
+    firmRow.style.display = 'flex';
+    document.getElementById('profFirm').textContent = item.firm || '-';
+  } else {
+    firmRow.style.display = 'none';
+  }
+
+  document.getElementById('profTerrArea').textContent = `${item.territory || '-'} (Area: ${item.area || '-'})`;
+  document.getElementById('profTO').textContent = item.toName || '-';
+  document.getElementById('profThanaDist').textContent = [item.thana, item.district].filter(Boolean).join(', ') || '-';
+  document.getElementById('profAddress').textContent = item.address || '-';
+
+  document.getElementById('profileModal').style.display = 'flex';
+}
+
+function closeModal(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+window.onclick = function(event) {
+  if (event.target.id === 'drilldownModal') closeModal('drilldownModal');
+  if (event.target.id === 'profileModal') closeModal('profileModal');
+};
+
+// --- Excel (.xlsx) Download Handlers ---
+function downloadSingleGroupProjects(groupNameDecoded, rows) {
+  const name = decodeURIComponent(groupNameDecoded);
+  const aoa = [
+    ["SL", "Project Name", "Area", "Territory", "Owner Name & Contact", "Address", "Status", "Dealer", "Retail", "TO Name", "Remaining Qty (Bags)", "Opportunity (MT)", "Brand"]
+  ];
+
+  rows.forEach((r, i) => {
+    aoa.push([
+      i + 1,
+      r.projectName,
+      r.area,
+      r.territory,
+      r.ownerDisplay || '',
+      r.address || '',
+      r.status || '',
+      r.dealerRaw || '',
+      r.retail || '',
+      r.toName || '',
+      r.remBags,
+      r.remMT,
+      r.brand || ''
+    ]);
+  });
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  XLSX.utils.book_append_sheet(wb, ws, "Projects");
+  XLSX.writeFile(wb, `${currentCategory}_Projects_${name.replace(/[\s\/\\]/g, '_')}.xlsx`);
+}
+
+function downloadModalProjectList() {
+  if (!activeModalProjects || activeModalProjects.length === 0) return;
+  downloadSingleGroupProjects(activeModalTitle, activeModalProjects);
+}
+
+function downloadCurrentSummaryTable() {
+  if (!currentSummaryRowsForExport || currentSummaryRowsForExport.length === 0) return;
+
+  const aoa = [];
+  if (currentView === 'DEALER') {
+    aoa.push(["#", "Dealer Name", "Area", "Territory", "Projects Count", "Remaining Qty (Bags)", "Remaining Qty (MT)", "Avg Bags/Project"]);
+    currentSummaryRowsForExport.forEach((item, i) => {
+      const avg = item.count > 0 ? Math.round(item.bags / item.count) : 0;
+      aoa.push([i + 1, item.name, item.area, item.territory, item.count, item.bags, item.mt, avg]);
+    });
+  } else {
+    aoa.push(["#", "TO Name", "Area", "Territory", "Projects Count", "Remaining Qty (Bags)", "Remaining Qty (MT)", "Engineers Count", "Contractors Count", "Masons Count"]);
+    currentSummaryRowsForExport.forEach((item, i) => {
+      aoa.push([i + 1, item.name, item.area, item.territory, item.projects.length, item.bags, item.mt, item.engineers.length, item.contractors.length, item.masons.length]);
+    });
+  }
+
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  XLSX.utils.book_append_sheet(wb, ws, `${currentView}_Summary`);
+  XLSX.writeFile(wb, `${currentCategory}_${currentView}_Summary_${selectedArea}_${selectedTerritory}.xlsx`);
+}
+</script>
+</body>
+</html>
